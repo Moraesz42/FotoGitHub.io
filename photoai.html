@@ -1,0 +1,200 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#15131c"><title>PhotoAI</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark;--bg:#15131c;--pn:#201d2b;--ln:#342f45;--tx:#efeaf7;--mu:#a29bb5;--ac:#a89bff;--ok:#7be0b0;--wr:#ffc27a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,sans-serif;min-height:100vh}
+h1,h2{font-family:'Bricolage Grotesque',system-ui,sans-serif;margin:0}
+main{max-width:560px;margin:0 auto;padding:16px}
+[hidden]{display:none!important}
+.logo{display:flex;align-items:center;gap:10px;font:700 26px 'Bricolage Grotesque',system-ui,sans-serif}
+button,.btn{font:inherit;min-height:48px;padding:0 18px;border-radius:12px;border:1px solid var(--ln);background:var(--pn);color:var(--tx);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+button:focus-visible,.btn:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.pri{background:var(--ac);color:#15131c;border-color:var(--ac);font-weight:700}
+button:disabled{opacity:.4}
+.big{width:100%;min-height:56px;font-size:18px;margin:18px 0 8px}
+.drop{border:1.5px dashed var(--ln);border-radius:16px;padding:18px;color:var(--mu);text-align:center;margin-top:8px}
+.hg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.th{padding:0;min-height:0;aspect-ratio:1;overflow:hidden}.th img{width:100%;height:100%;object-fit:cover}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{flex:1}
+.bar{display:flex;gap:8px;justify-content:space-between;margin-bottom:10px}.bar button{flex:1;padding:0 8px}
+#st{position:relative;border-radius:14px;overflow:hidden;background:#0b0a10;border:1px solid var(--ln)}
+#st canvas{display:block;width:100%;height:auto;max-height:52vh;object-fit:contain}
+#st #co{position:absolute;inset:0;height:100%}
+#ln{position:absolute;top:0;bottom:0;width:2px;background:var(--ac);pointer-events:none}
+#sl{width:100%;margin:10px 0 2px;accent-color:var(--ac);min-height:32px}
+.mu{color:var(--mu);font-size:14px}
+#log{margin:10px 0;display:flex;flex-direction:column;gap:6px;max-height:30vh;overflow:auto}
+#log div{padding:8px 12px;border-radius:12px;font-size:14.5px;background:var(--pn)}
+#log .me{background:#2d2750;align-self:flex-end}#log .ok{border-left:3px solid var(--ok)}#log .wr{border-left:3px solid var(--wr)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px}.chips button{min-height:36px;font-size:14px;white-space:nowrap;border-radius:18px;flex:none}
+textarea{width:100%;min-height:76px;border-radius:12px;border:1px solid var(--ln);background:var(--pn);color:var(--tx);padding:12px;font:inherit;resize:vertical}
+select{min-height:44px;border-radius:10px;background:var(--pn);color:var(--tx);border:1px solid var(--ln);padding:0 8px;font:inherit}
+.ov{position:fixed;inset:0;background:rgba(10,9,14,.9);z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;text-align:center}
+.ov img{max-width:100%;max-height:65vh;border-radius:10px}
+.sp{width:34px;height:34px;border:4px solid var(--ln);border-top-color:var(--ac);border-radius:50%;animation:r 1s linear infinite}
+@keyframes r{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.sp{animation-duration:3s}}
+#toast{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--wr);color:#15131c;padding:12px 14px;border-radius:12px;z-index:10}
+</style></head><body>
+<main id="home">
+<div class="logo"><svg width="30" height="30" viewBox="0 0 28 28" fill="none" stroke="#a89bff" stroke-width="2" aria-hidden="true"><circle cx="14" cy="14" r="11"/><path d="M14 3l5 9M25 14l-9 5M14 25l-5-9M3 14l9-5"/></svg>PhotoAI</div>
+<p class="mu">Edite fotos escrevendo o que quer mudar. Tudo é feito no seu aparelho: a foto não sai do iPhone.</p>
+<label class="btn pri big" for="f1">Nova edição: selecionar foto</label><input id="f1" type="file" accept="image/*" hidden>
+<div class="drop">Ou arraste uma imagem para cá</div>
+<h2 style="margin-top:22px;font-size:20px">Últimas edições</h2>
+<p id="hn" class="mu">Nenhuma edição ainda. Suas edições ficam salvas só neste aparelho.</p>
+<div id="hg" class="hg"></div>
+<button id="clr" hidden>Apagar histórico</button>
+<p class="mu" style="margin-top:22px">Para instalar no iPhone: abra no Safari, toque em Compartilhar e depois em Adicionar à Tela de Início.</p>
+</main>
+<main id="edit" hidden>
+<div class="bar"><button id="back">Início</button><button id="undo" aria-label="Desfazer">Desfazer</button><button id="redo" aria-label="Refazer">Refazer</button></div>
+<div id="st"><canvas id="cv"></canvas><canvas id="co"></canvas><div id="ln" style="left:0"></div></div>
+<input id="sl" type="range" min="0" max="100" value="0" aria-label="Comparar antes e depois">
+<div class="row mu"><span>Arraste para ver o original</span><span id="info" style="text-align:right"></span></div>
+<div id="log" aria-live="polite"></div>
+<div class="chips" id="chips"></div>
+<textarea id="cmd" placeholder="Descreva como deseja editar sua foto..." aria-label="Comando de edição"></textarea>
+<label class="mu" style="display:flex;gap:8px;align-items:flex-start;margin-top:8px"><input type="checkbox" id="online" style="margin-top:4px"><span>Permitir IA online (Hugging Face) para pedidos generativos, como trocar o fundo por uma paisagem. Sua foto é enviada a um serviço de terceiros, com cota gratuita limitada e fila.</span></label>
+<button id="go" class="pri big" style="margin-top:8px">Editar com IA</button>
+<div class="row"><select id="fmt" aria-label="Formato"><option value="image/jpeg">JPEG</option><option value="image/png">PNG</option></select><select id="q" aria-label="Qualidade"><option value="95">Qualidade alta</option><option value="85" selected>Qualidade média</option><option value="70">Qualidade menor</option></select></div>
+<div class="row" style="margin-top:8px"><button id="sv" class="pri">Salvar ou compartilhar</button><label class="btn" for="f2">Trocar foto</label><input id="f2" type="file" accept="image/*" hidden></div>
+<p class="mu">Ferramentas locais: brilho, contraste, cores, temperatura, sombras, nitidez, desfoque, p&amp;b, sépia, vinheta, look cinematográfico, corte (4:5, 1:1, 9:16), giro, espelho e ampliação 2×. IA local: remover, desfocar ou trocar o fundo por cor ou degradê em fotos de pessoas (modelo MODNet, baixa ~25 MB na primeira vez). Pedidos generativos só funcionam com a IA online ligada e nunca são simulados.</p>
+</main>
+<div id="bz" class="ov" hidden><div class="sp"></div><div id="bzt">Processando…</div></div>
+<div id="ov" class="ov" hidden><img alt="Resultado"><div>Mantenha o dedo sobre a imagem e escolha Salvar na Galeria.</div><button id="cl">Fechar</button></div>
+<script>
+const $=s=>document.querySelector(s),mk=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
+let orig,vers=[],idx=-1,sid=0,cmds=[];
+function toast(m){let t=$('#toast');if(t)t.remove();t=document.createElement('div');t.id='toast';t.setAttribute('role','alert');t.textContent=m;document.body.append(t);setTimeout(()=>t.remove(),4500)}
+function say(t,c){const d=document.createElement('div');d.className=c;d.textContent=t;$('#log').append(d);$('#log').scrollTop=1e9}
+const show=v=>{$('#home').hidden=v!=='home';$('#edit').hidden=v!=='edit';scrollTo(0,0)};
+const busy=(o,t)=>{$('#bz').hidden=!o;if(t)$('#bzt').textContent=t};
+/* ---------- histórico (IndexedDB, local) ---------- */
+const DB=()=>new Promise((res,rej)=>{const r=indexedDB.open('photoai',1);r.onupgradeneeded=()=>r.result.createObjectStore('h',{keyPath:'id'});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+async function hput(o){try{(await DB()).transaction('h','readwrite').objectStore('h').put(o)}catch(e){}}
+async function hist(){let a=[];try{const d=await DB();a=await new Promise(r=>{const q=d.transaction('h').objectStore('h').getAll();q.onsuccess=()=>r(q.result);q.onerror=()=>r([])})}catch(e){}
+ a.sort((x,y)=>y.ts-x.ts);const g=$('#hg');g.innerHTML='';$('#hn').hidden=!!a.length;$('#clr').hidden=!a.length;
+ a.slice(0,24).forEach(e=>{const b=document.createElement('button'),im=new Image(),u=URL.createObjectURL(e.blob);b.className='th';b.setAttribute('aria-label','Abrir edição de '+new Date(e.ts).toLocaleDateString('pt-BR'));im.alt='';im.src=u;im.onload=()=>URL.revokeObjectURL(u);b.append(im);b.onclick=()=>openImg(e.blob);g.append(b)})}
+$('#clr').onclick=async()=>{if(!confirm('Apagar todo o histórico deste aparelho?'))return;try{(await DB()).transaction('h','readwrite').objectStore('h').clear()}catch(e){}setTimeout(hist,100)};
+function save(){vers[idx].toBlob(b=>{if(b)hput({id:sid,ts:Date.now(),blob:b,cmds})},'image/jpeg',.85)}
+/* ---------- importação ---------- */
+async function openImg(f){
+ if(!f||!f.type||!f.type.startsWith('image/'))return toast('Arquivo inválido: escolha uma imagem (JPEG, PNG ou WebP).');
+ if(f.size>40e6)return toast('Imagem acima de 40 MB. Escolha uma menor.');
+ busy(true);let bm;
+ try{bm=await createImageBitmap(f,{imageOrientation:'from-image'})}catch(e){try{bm=await createImageBitmap(f)}catch(e2){busy(false);return toast('Não foi possível ler essa imagem. Tente JPEG ou PNG.')}}
+ const k=Math.min(1,2048/Math.max(bm.width,bm.height)),c=mk(Math.round(bm.width*k),Math.round(bm.height*k));c.getContext('2d').drawImage(bm,0,0,c.width,c.height);
+ orig=c;vers=[c];idx=0;sid=Date.now();cmds=[];$('#log').innerHTML='';$('#sl').value=0;
+ say('Foto carregada. O original fica preservado; cada edição cria uma nova versão.','ok');busy(false);show('edit');render()}
+$('#f1').onchange=e=>{openImg(e.target.files[0]);e.target.value=''};$('#f2').onchange=e=>{openImg(e.target.files[0]);e.target.value=''};
+const H=$('#home');H.ondragover=e=>e.preventDefault();H.ondrop=e=>{e.preventDefault();openImg(e.dataTransfer.files[0])};
+/* ---------- interpretador de comandos ---------- */
+const N=t=>t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const UN=[[/remov|apag|elimin|tire (as |os |a |o )?(pessoa|objeto|gente)/,'remover pessoas ou objetos'],[/fundo|cenario|background/,'trocar ou alterar o fundo'],[/espinha|imperfei|acne|ruga|pele/,'retocar a pele'],[/camiset|camisa|roupa|cabelo|olhos?\b|sorri/,'alterar partes específicas da imagem'],[/restaur|recuper|antiga/,'restaurar fotos antigas'],[/profissional|transform|crie|gere|gerar|desenh|anime|cartoon|pintura|ilustra/,'gerar ou transformar a imagem']];
+function parse(text){const t=N(text),P={t:{},g:{},labels:[],no:[],ign:[],gen:[],bg:null};
+ const add=(k,v,l)=>{P.t[k]=(P.t[k]||0)+v;P.labels.push(l)},pc=v=>Math.round(Math.abs(v)*100)+'%';
+ const cl=t.split(/[,;.!]|\se\s(?=(?:deix|mude|melhor|realc|cort|aument|reduz|aplic|gire|desfoq|adicion|fa[cz]a|torn|coloq))|\bdepois\b|\bagora\b/).map(s=>s.trim()).filter(Boolean);
+ for(const c of cl){const bm=bgMode(c);if(bm){P.bg=bm;P.labels.push(bm.l);continue}
+  const u=UN.find(([r])=>r.test(c));if(u){P.gen.push(c);P.no.push(u[1]);continue}
+  const k=/um pouco|leve|sutil|ligeir/.test(c)?.5:/muito|bastante|bem |forte|intens/.test(c)?1.6:1;let m=0;const hit=(r,f)=>{if(r.test(c)){f();m=1}};
+  hit(/clar|brilh|ilumin|exposi|escur/,()=>{const s=/escur|menos|reduz/.test(c)?-1:1;add('b',.16*k*s,'brilho '+(s>0?'+':'−')+pc(.16*k));if(/ilumin/.test(c))add('sh',.5*k,'sombras suavizadas')});
+  hit(/contrast/,()=>{const s=/menos|reduz|diminu/.test(c)?-1:1;add('c',.2*k*s,'contraste '+(s>0?'+':'−')+pc(.2*k))});
+  hit(/satura|colorid|vibran|vivid|cores/,()=>{const s=/dessatur|menos|reduz|apag/.test(c)?-1:1;add('sat',.3*k*s,'saturação '+(s>0?'+':'−')+pc(.3*k))});
+  hit(/quente|aquec|dourad/,()=>add('w',.5*k,'tom mais quente'));hit(/frio|esfri|azulad/,()=>add('w',-.5*k,'tom mais frio'));
+  hit(/nitid|nitez|defin|focad|qualidade|detalhe|sharp/,()=>add('sharp',k,'nitidez'+(/qualidade/.test(c)?' (aprimoramento convencional, sem reconstrução por IA)':'')));
+  if(!/ilumin/.test(c))hit(/sombra/,()=>add('sh',.6*k,'sombras suavizadas'));
+  hit(/desfoc|blur|borr|suaviz/,()=>add('blur',k,'desfoque'));
+  hit(/preto e branco|p&b|\bpb\b|monocrom|cinza/,()=>add('bw',1,'preto e branco'));
+  hit(/sepia|vintage|retro/,()=>{add('sep',1,'sépia');add('vig',.3,'vinheta')});
+  hit(/cinema|filme/,()=>add('cine',1,'look cinematográfico convencional (ajuste de cor, não generativo)'));
+  hit(/vinheta/,()=>add('vig',.5*k,'vinheta'));
+  const r=c.match(/(\d{1,2})\s*[:x\/]\s*(\d{1,2})/);
+  if(r){P.g.cr=[+r[1],+r[2]];P.labels.push('corte '+r[1]+':'+r[2]);m=1}else hit(/quadrad/,()=>{P.g.cr=[1,1];P.labels.push('corte 1:1')});
+  hit(/stories|reels|tiktok/,()=>{P.g.cr=[9,16];P.labels.push('corte 9:16')});
+  hit(/gir|rotac|vire/,()=>{const d=+((c.match(/(\d+)\s*graus/)||[])[1]||90);P.g.rot=(P.g.rot||0)+(/esquerda|anti/.test(c)?-d:d);P.labels.push('giro')});
+  hit(/espelh/,()=>{P.g.flip=1;P.labels.push('espelhamento')});
+  hit(/resolucao|ampli|upscale/,()=>{P.g.scale=1;P.labels.push('ampliação 2× convencional (sem reconstrução por IA)')});
+  if(!m)P.ign.push(c)}
+ return P}
+/* ---------- motor de imagem ---------- */
+function bx(s,w,h,r){const a=new Uint8ClampedArray(s.length),b=new Uint8ClampedArray(s.length);
+ const ps=(S,D,hz)=>{const L=hz?h:w,n=hz?w:h,st=hz?4:w*4,ls=hz?w*4:4,k=2*r+1;for(let l=0;l<L;l++){const o=l*ls;for(let c=0;c<3;c++){let u=0;for(let i=-r;i<=r;i++)u+=S[o+Math.min(n-1,Math.max(0,i))*st+c];for(let i=0;i<n;i++){D[o+i*st+c]=u/k;u+=S[o+Math.min(n-1,i+r+1)*st+c]-S[o+Math.max(0,i-r)*st+c]}}}};
+ ps(s,a,1);ps(a,b,0);ps(b,a,1);ps(a,b,0);for(let i=3;i<s.length;i+=4)b[i]=s[i];return b}
+function apply(src,P){let c=src;const g=P.g;
+ if(g.rot){const r=((Math.round(g.rot/90)*90)%360+360)%360;if(r){const o=r%180?mk(c.height,c.width):mk(c.width,c.height),x=o.getContext('2d');x.translate(o.width/2,o.height/2);x.rotate(r*Math.PI/180);x.drawImage(c,-c.width/2,-c.height/2);c=o}}
+ if(g.flip){const o=mk(c.width,c.height),x=o.getContext('2d');x.translate(c.width,0);x.scale(-1,1);x.drawImage(c,0,0);c=o}
+ if(g.cr){const[a,b]=g.cr;if(!a||!b)throw new Error('proporção de corte inválida');let w=c.width,h=c.height;if(w/h>a/b)w=Math.round(h*a/b);else h=Math.round(w*b/a);const o=mk(w,h);o.getContext('2d').drawImage(c,(c.width-w)/2,(c.height-h)/2,w,h,0,0,w,h);c=o}
+ if(g.scale){const f=Math.min(2,4096/Math.max(c.width,c.height));if(f>1.01){const o=mk(Math.round(c.width*f),Math.round(c.height*f)),x=o.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(c,0,0,o.width,o.height);c=o}else P.labels.push('(imagem já está no limite de 4096 px)')}
+ if(c===src){const o=mk(c.width,c.height);o.getContext('2d').drawImage(c,0,0);c=o}
+ const T=P.t,w=c.width,h=c.height,x=c.getContext('2d');if(!Object.keys(T).length)return c;
+ const I=x.getImageData(0,0,w,h),d=I.data,cn=T.cine||0,b=1+(T.b||0),ct=1+(T.c||0)+cn*.15,sa=1+(T.sat||0)-cn*.1,wm=(T.w||0)*22,sh=(T.sh||0)*70,vg=Math.min(.9,(T.vig||0)+cn*.4),bw=Math.min(1,T.bw||0),sp=Math.min(1,T.sep||0),cx=w/2,cy=h/2,md=cx*cx+cy*cy;
+ if(T.b||T.c||T.sat||T.w||T.sh||cn||T.vig||bw||sp)for(let y=0,i=0;y<h;y++)for(let X=0;X<w;X++,i+=4){let r=d[i],G=d[i+1],B=d[i+2];
+  if(sh){r+=sh*(1-r/255)**2;G+=sh*(1-G/255)**2;B+=sh*(1-B/255)**2}
+  r*=b;G*=b;B*=b;r=(r-128)*ct+128;G=(G-128)*ct+128;B=(B-128)*ct+128;r+=wm;B-=wm;
+  if(cn){const l=(.299*r+.587*G+.114*B)/255-.5;r+=l*cn*34;B-=l*cn*34}
+  let gr=.299*r+.587*G+.114*B;r=gr+(r-gr)*sa;G=gr+(G-gr)*sa;B=gr+(B-gr)*sa;
+  if(bw){gr=.299*r+.587*G+.114*B;r+=(gr-r)*bw;G+=(gr-G)*bw;B+=(gr-B)*bw}
+  if(sp){const R=.393*r+.769*G+.189*B,GG=.349*r+.686*G+.168*B,BB=.272*r+.534*G+.131*B;r+=(R-r)*sp;G+=(GG-G)*sp;B+=(BB-B)*sp}
+  if(vg){const dx=X-cx,dy=y-cy,f=1-vg*((dx*dx+dy*dy)/md);r*=f;G*=f;B*=f}
+  d[i]=r;d[i+1]=G;d[i+2]=B}
+ x.putImageData(I,0,0);
+ if(T.blur||T.sharp){const D=x.getImageData(0,0,w,h),s=D.data,m=Math.max(w,h);
+  if(T.blur)s.set(bx(s,w,h,Math.max(1,Math.round(m/150*T.blur))));
+  if(T.sharp){const q=bx(s,w,h,Math.max(1,Math.round(m/700))),a=1.1*Math.min(T.sharp,2);for(let i=0;i<s.length;i+=4)for(let k=0;k<3;k++)s[i+k]=s[i+k]+a*(s[i+k]-q[i+k])}
+  x.putImageData(D,0,0)}
+ return c}
+/* ---------- interface ---------- */
+function clip(){const v=+$('#sl').value;$('#co').style.clipPath='inset(0 '+(100-v)+'% 0 0)';$('#ln').style.left='calc('+v+'% - 1px)';$('#ln').hidden=v==0}
+function render(){const c=vers[idx],cv=$('#cv'),co=$('#co');cv.width=c.width;cv.height=c.height;cv.getContext('2d').drawImage(c,0,0);co.width=c.width;co.height=c.height;
+ const x=co.getContext('2d'),s=Math.min(c.width/orig.width,c.height/orig.height),w=orig.width*s,h=orig.height*s;x.clearRect(0,0,c.width,c.height);x.drawImage(orig,(c.width-w)/2,(c.height-h)/2,w,h);
+ clip();$('#undo').disabled=idx<1;$('#redo').disabled=idx>=vers.length-1;$('#info').textContent=c.width+'×'+c.height+' px · versão '+idx}
+async function run(){const t=$('#cmd').value.trim();if(!t)return toast('Escreva o que deseja mudar.');say(t,'me');const P=parse(t);
+ const on=$('#online').checked&&P.gen.length;
+ if(!on)P.no.forEach(n=>say('Não consigo '+n+' sem IA generativa, e não vou simular com um filtro. Marque "Permitir IA online" para tentar. Nada foi alterado para esse pedido.','wr'));
+ if(P.ign.length)say('Não entendi: "'+P.ign.join('", "')+'". Tente por exemplo "mais clara", "mais nitidez" ou "corte 4:5".','wr');
+ if(!P.labels.length&&!on)return;busy(true,'Processando…');await new Promise(r=>setTimeout(r,50));
+ try{let o=apply(vers[idx],P);if(P.bg){busy(true,'Carregando IA local…');o=await doBg(o,P.bg)}
+  if(on){o=await remote(o,P.gen.join(', '));P.labels.push('edição generativa online (Hugging Face)')}
+  vers=vers.slice(0,idx+1);vers.push(o);if(vers.length>16)vers.splice(1,1);idx=vers.length-1;cmds.push(t);say('Aplicado: '+P.labels.join('; ')+'.','ok');$('#cmd').value='';$('#sl').value=0;render();save()}
+ catch(e){say('Erro ao processar: '+e.message,'wr')}busy(false)}
+$('#go').onclick=run;$('#sl').oninput=clip;
+$('#undo').onclick=()=>{if(idx>0){idx--;render()}};$('#redo').onclick=()=>{if(idx<vers.length-1){idx++;render()}};
+$('#back').onclick=()=>{show('home');hist()};$('#cl').onclick=()=>{$('#ov').hidden=true};
+$('#sv').onclick=async()=>{const t=$('#fmt').value,c=vers[idx];busy(true);
+ const b=await new Promise(r=>c.toBlob(r,t,$('#q').value/100));busy(false);if(!b)return toast('Não foi possível exportar a imagem.');
+ const f=new File([b],'photoai-'+Date.now()+(t==='image/png'?'.png':'.jpg'),{type:t});
+ if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:'PhotoAI'});return}catch(e){if(e.name==='AbortError')return}}
+ const u=URL.createObjectURL(b);$('#ov img').src=u;$('#ov').hidden=false};
+["Deixe mais clara e realce as cores","Aumente a nitidez","Corte em 4:5","Preto e branco","Look cinematográfico","Desfoque leve","Melhore a iluminação"].forEach(s=>{const b=document.createElement('button');b.textContent=s;b.onclick=()=>{$('#cmd').value=s;$('#cmd').focus()};$('#chips').append(b)});
+const COL={preto:'#000',branco:'#fff',azul:'#2a62ff',verde:'#1f9d55',vermelho:'#d33',rosa:'#f48fb1',amarelo:'#ffd23f',cinza:'#888',roxo:'#7b4fd8',laranja:'#ff8a3d'},GR={'por do sol':['#ff7a3d','#7b2f8f'],noite:['#0b1030','#2a3a7a'],ceu:['#7ec8ff','#e8f6ff']};
+function bgMode(c){if(!/fundo/.test(c))return null;
+ if(/desfoc|blur|borr/.test(c))return{m:'blur',l:'fundo desfocado (IA local MODNet)'};
+ const g=Object.keys(GR).find(k=>c.includes(k)),k=Object.keys(COL).find(k=>new RegExp('\\b'+k+'\\b').test(c));
+ if(g)return{m:'fill',f:GR[g],l:'fundo trocado por degradê "'+g+'" (IA local)'};if(k)return{m:'fill',f:[COL[k],COL[k]],l:'fundo '+k+' (IA local)'};
+ if(/remov|tire|apag|sem |recort/.test(c))return{m:'remove',l:'fundo removido (IA local; exporte em PNG para manter a transparência)'};return null}
+let seg;async function loadSeg(){if(seg)return seg;const T=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.1'),cb=p=>{if(p.status==='progress')busy(true,'Baixando IA local: '+Math.round(p.progress||0)+'%')};
+ let model;try{model=await T.AutoModel.from_pretrained('Xenova/modnet',{device:'webgpu',progress_callback:cb})}catch(e){model=await T.AutoModel.from_pretrained('Xenova/modnet',{progress_callback:cb})}
+ return seg={T,model,proc:await T.AutoProcessor.from_pretrained('Xenova/modnet')}}
+async function doBg(c,b){const S=await loadSeg(),w=c.width,h=c.height;busy(true,'IA local analisando a foto…');
+ const img=await S.T.RawImage.fromBlob(await new Promise(r=>c.toBlob(r,'image/png'))),{pixel_values}=await S.proc(img),{output}=await S.model({input:pixel_values}),m=(await S.T.RawImage.fromTensor(output[0].mul(255).to('uint8')).resize(w,h)).data;
+ const cut=mk(w,h),I=c.getContext('2d').getImageData(0,0,w,h);for(let i=0;i<w*h;i++)I.data[i*4+3]=m[i];cut.getContext('2d').putImageData(I,0,0);
+ const o=mk(w,h),y=o.getContext('2d');
+ if(b.m==='blur'){const D=c.getContext('2d').getImageData(0,0,w,h);D.data.set(bx(D.data,w,h,Math.max(2,Math.round(Math.max(w,h)/60))));y.putImageData(D,0,0)}
+ else if(b.m==='fill'){const g=y.createLinearGradient(0,0,0,h);g.addColorStop(0,b.f[0]);g.addColorStop(1,b.f[1]);y.fillStyle=g;y.fillRect(0,0,w,h)}
+ y.drawImage(cut,0,0);return o}
+const SPACES=['Qwen/Qwen-Image-Edit','linoyts/Qwen-Image-Edit','zerogpu-aoti/Qwen-Image-Edit-aot-dynamic-fa3-fix-cfg'];let okOnline=0;
+const findUrl=d=>{if(!d)return'';if(typeof d==='string')return/^https?:/.test(d)?d:'';if(d.url)return d.url;for(const v of Object.values(d)){const u=findUrl(v);if(u)return u}return''};
+async function remote(c,prompt){if(!okOnline&&!confirm('Sua foto será enviada ao Hugging Face (serviço de terceiros) para esta edição. Continuar?'))throw new Error('envio cancelado');okOnline=1;
+ const f=Math.min(1,1024/Math.max(c.width,c.height)),s=mk(Math.round(c.width*f),Math.round(c.height*f));s.getContext('2d').drawImage(c,0,0,s.width,s.height);
+ const blob=await new Promise(r=>s.toBlob(r,'image/jpeg',.92)),G=await import('https://cdn.jsdelivr.net/npm/@gradio/client@1.14.0/+esm');let err='';
+ for(const sp of SPACES){try{busy(true,'IA online: '+sp+' (pode haver fila)…');
+  const cl=await G.Client.connect(sp),eps=(await cl.view_api()).named_endpoints||{};
+  for(const[n,ep]of Object.entries(eps)){const ps=ep.parameters||[],im=ps.findIndex(p=>/^Image/.test(p.component||'')),tx=ps.findIndex(p=>/^Textbox/.test(p.component||''));if(im<0||tx<0)continue;
+   const a=ps.map((p,i)=>i===im?G.handle_file(blob):i===tx?prompt:p.parameter_has_default?p.parameter_default:null);
+   const r=await Promise.race([cl.predict(n,a),new Promise((_,j)=>setTimeout(()=>j(new Error('tempo esgotado')),240000))]),u=findUrl(r.data);if(!u)continue;
+   const bm=await createImageBitmap(await(await fetch(u)).blob()),k=Math.min(1,2048/Math.max(bm.width,bm.height)),o=mk(Math.round(bm.width*k),Math.round(bm.height*k));o.getContext('2d').drawImage(bm,0,0,o.width,o.height);return o}
+  err+=sp+': nenhum endpoint compatível. '}catch(e){err+=sp+': '+(e.message||e)+'. '}}
+ throw new Error('IA online indisponível agora ('+err+'). Tente de novo mais tarde.')}
+hist();
+</script></body></html>
