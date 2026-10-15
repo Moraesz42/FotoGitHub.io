@@ -55,7 +55,7 @@ select{min-height:44px;border-radius:10px;background:var(--pn);color:var(--tx);b
 <div id="log" aria-live="polite"></div>
 <div class="chips" id="chips"></div>
 <textarea id="cmd" placeholder="Descreva como deseja editar sua foto..." aria-label="Comando de edição"></textarea>
-<label class="mu" style="display:flex;gap:8px;align-items:flex-start;margin-top:8px"><input type="checkbox" id="online" style="margin-top:4px"><span>Permitir IA online (Hugging Face) para pedidos generativos, como trocar o fundo por uma paisagem. Sua foto é enviada a um serviço de terceiros, com cota gratuita limitada e fila.</span></label>
+<label class="mu" style="display:flex;gap:8px;align-items:flex-start;margin-top:8px"><input type="checkbox" id="online" style="margin-top:4px"><span>Permitir IA online (Qwen Image Edit, no Hugging Face) para pedidos generativos, como tirar um logo. Escreva o pedido em inglês para um resultado melhor. Sua foto é enviada a um serviço de terceiros, com cota gratuita limitada e fila. O resultado pode mudar o enquadramento da imagem.</span></label>
 <button id="go" class="pri big" style="margin-top:8px">Editar com IA</button>
 <div class="row"><select id="fmt" aria-label="Formato"><option value="image/jpeg">JPEG</option><option value="image/png">PNG</option></select><select id="q" aria-label="Qualidade"><option value="95">Qualidade alta</option><option value="85" selected>Qualidade média</option><option value="70">Qualidade menor</option></select></div>
 <div class="row" style="margin-top:8px"><button id="sv" class="pri">Salvar ou compartilhar</button><label class="btn" for="f2">Trocar foto</label><input id="f2" type="file" accept="image/*" hidden></div>
@@ -158,7 +158,7 @@ async function run(){const t=$('#cmd').value.trim();if(!t)return toast('Escreva 
  try{let o=apply(vers[idx],P);if(P.bg){busy(true,'Carregando IA local…');o=await doBg(o,P.bg)}
   if(on){o=await remote(o,P.labels.length?P.gen.join(', '):t);P.labels.push('edição generativa online (Hugging Face)')}
   vers=vers.slice(0,idx+1);vers.push(o);if(vers.length>16)vers.splice(1,1);idx=vers.length-1;cmds.push(t);say('Aplicado: '+P.labels.join('; ')+'.','ok');$('#cmd').value='';$('#sl').value=0;render();save()}
- catch(e){say('Erro ao processar: '+e.message,'wr');if(/IA online/.test(e.message))say('Alternativa manual: abra https://huggingface.co/spaces/Qwen/Qwen-Image-Edit-2509 no navegador, envie a foto e escreva o pedido lá.','wr')}busy(false)}
+ catch(e){say('Erro ao processar: '+e.message,'wr');if(/IA online/.test(e.message))say('Alternativa manual: abra https://huggingface.co/spaces/prithivMLmods/Qwen-Image-Edit-2509-LoRAs-Fast no navegador, envie a foto e escreva o pedido lá.','wr')}busy(false)}
 $('#go').onclick=run;$('#sl').oninput=clip;
 $('#undo').onclick=()=>{if(idx>0){idx--;render()}};$('#redo').onclick=()=>{if(idx<vers.length-1){idx++;render()}};
 $('#back').onclick=()=>{show('home');hist()};$('#cl').onclick=()=>{$('#ov').hidden=true};
@@ -184,22 +184,21 @@ async function doBg(c,b){const S=await loadSeg(),w=c.width,h=c.height;busy(true,
  if(b.m==='blur'){const D=c.getContext('2d').getImageData(0,0,w,h);D.data.set(bx(D.data,w,h,Math.max(2,Math.round(Math.max(w,h)/60))));y.putImageData(D,0,0)}
  else if(b.m==='fill'){const g=y.createLinearGradient(0,0,0,h);g.addColorStop(0,b.f[0]);g.addColorStop(1,b.f[1]);y.fillStyle=g;y.fillRect(0,0,w,h)}
  y.drawImage(cut,0,0);return o}
-const SPACES=['Qwen/Qwen-Image-Edit-2509','linoyts/Qwen-Image-Edit-2509-Fast','akhaliq/Qwen-Image-Edit-2509','Menyu/Qwen-Image-Edit-Fast-2509','prithivMLmods/Qwen-Image-Edit-2509-LoRAs-Fast'];let okOnline=0;
-const findUrl=d=>{if(!d)return'';if(typeof d==='string')return/^https?:/.test(d)?d:'';if(d.url)return d.url;for(const v of Object.values(d)){const u=findUrl(v);if(u)return u}return''};
+const HF='https://prithivmlmods-qwen-image-edit-2509-loras-fast.hf.space';let okOnline=0;
+const dataImg=d=>{if(!d)return'';if(typeof d==='string')return d.startsWith('data:image')?d:'';for(const v of Object.values(d)){const u=dataImg(v);if(u)return u}return''};
 async function remote(c,prompt){if(!okOnline&&!confirm('Sua foto será enviada ao Hugging Face (serviço de terceiros) para esta edição. Continuar?'))throw new Error('envio cancelado');okOnline=1;
  const f=Math.min(1,1024/Math.max(c.width,c.height)),s=mk(Math.round(c.width*f),Math.round(c.height*f));s.getContext('2d').drawImage(c,0,0,s.width,s.height);
- const blob=await new Promise(r=>s.toBlob(r,'image/jpeg',.92)),J=(u,o)=>fetch(u,{credentials:'omit',...o}),ok=r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r};let err='',st='';
- for(const sp of SPACES){const H='https://'+sp.toLowerCase().replace(/[\/_.]/g,'-')+'.hf.space';try{st='ler a API';busy(true,'IA online: '+sp+' (pode haver fila)…');
-  let r=await J(H+'/gradio_api/info');if(!r.ok)r=await J(H+'/info');const eps=(await ok(r).json()).named_endpoints||{};
-  for(const[n,ep]of Object.entries(eps)){const ps=ep.parameters||[],im=ps.findIndex(p=>/^(Image|Gallery)/.test(p.component||'')),tx=ps.findIndex(p=>/^Textbox/.test(p.component||''));if(im<0||tx<0)continue;
-   st='enviar a foto';const fd=new FormData();fd.append('files',blob,'foto.jpg');const fo={path:(await ok(await J(H+'/gradio_api/upload',{method:'POST',body:fd})).json())[0],meta:{_type:'gradio.FileData'}};
-   const a=ps.map((p,i)=>i===im?(/^Gallery/.test(p.component)?[{image:fo,caption:null}]:fo):i===tx?prompt:/rewrite/i.test(p.parameter_name||p.label||'')?false:p.parameter_has_default?p.parameter_default:null),api=H+'/gradio_api/call/'+n.replace(/^\//,'');
-   st='processar';const q=await ok(await J(api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:a})})).json();
-   const sse=await Promise.race([J(api+'/'+q.event_id).then(x=>x.text()),new Promise((_,j)=>setTimeout(()=>j(new Error('tempo esgotado')),240000))]),m=sse.match(/event: complete\s*\r?\ndata: (.*)/);
-   if(!m){const em=(sse.match(/event: error\s*\r?\ndata: (.*)/)||[])[1];throw new Error(!em||em==='null'?'o Space falhou por dentro (provável cota gratuita de GPU esgotada ou fila cheia)':em)}
-   const u=findUrl(JSON.parse(m[1]));if(!u)continue;
-   st='baixar o resultado';const bm=await createImageBitmap(await ok(await J(u)).blob()),k=Math.min(1,2048/Math.max(bm.width,bm.height)),o=mk(Math.round(bm.width*k),Math.round(bm.height*k));o.getContext('2d').drawImage(bm,0,0,o.width,o.height);return o}
-  err+=sp+': nenhum endpoint compatível. '}catch(e){err+=sp+' [etapa: '+st+']: '+(e.message||e)+'. '}}
+ const url=s.toDataURL('image/jpeg',.92),J=(u,o)=>fetch(u,{credentials:'omit',...o}),PH={'Content-Type':'application/json'};let err='';
+ for(const img of[url,url.split(',')[1]]){try{busy(true,'IA online (Qwen Image Edit): enviando…');
+  const kw={image_b64:img,prompt,lora_adapter:'Photo-to-Anime',seed:Math.floor(Math.random()*1e7),randomize_seed:true,guidance_scale:1,steps:4};
+  let r=await J(HF+'/gradio_api/call/v2/edit_image',{method:'POST',headers:PH,body:JSON.stringify(kw)});
+  if(!r.ok)r=await J(HF+'/gradio_api/call/edit_image',{method:'POST',headers:PH,body:JSON.stringify({data:Object.values(kw)})});
+  if(!r.ok)throw new Error('HTTP '+r.status);const id=(await r.json()).event_id;busy(true,'IA online: processando (pode levar 1 a 2 minutos)…');
+  let g=await J(HF+'/gradio_api/call/edit_image/'+id);if(!g.ok)g=await J(HF+'/gradio_api/call/v2/edit_image/'+id);if(!g.ok)throw new Error('HTTP '+g.status);
+  const sse=await Promise.race([g.text(),new Promise((_,j)=>setTimeout(()=>j(new Error('tempo esgotado')),240000))]),m=sse.match(/event: complete\s*\r?\ndata: (.*)/);
+  if(!m){const em=(sse.match(/event: error\s*\r?\ndata: (.*)/)||[])[1];throw new Error(!em||em==='null'?'o Space falhou por dentro (cota de GPU ou fila)':em)}
+  const u=dataImg(JSON.parse(m[1]));if(!u)throw new Error('a resposta não trouxe imagem');
+  const bm=await createImageBitmap(await(await fetch(u)).blob()),k=Math.min(1,2048/Math.max(bm.width,bm.height)),o=mk(Math.round(bm.width*k),Math.round(bm.height*k));o.getContext('2d').drawImage(bm,0,0,o.width,o.height);return o}catch(e){err+=(e.message||e)+'. '}}
  throw new Error('IA online indisponível agora ('+err+'). Tente de novo mais tarde.')}
 hist();
 </script></body></html>
