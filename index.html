@@ -190,7 +190,7 @@ async function remote(c,prompt){if(!okOnline&&!confirm('Sua foto será enviada a
  const f=Math.min(1,1024/Math.max(c.width,c.height)),s=mk(Math.round(c.width*f),Math.round(c.height*f));s.getContext('2d').drawImage(c,0,0,s.width,s.height);
  const blob=await new Promise(r=>s.toBlob(r,'image/jpeg',.92)),G=await import('https://cdn.jsdelivr.net/npm/@gradio/client@1.14.0/+esm');let err='',st='';
  for(const sp of SPACES){try{st='conectar';busy(true,'IA online: '+sp+' (pode haver fila)…');
-  const cl=await G.Client.connect(sp);st='ler a API';const eps=(await cl.view_api()).named_endpoints||{};
+  let cl;try{cl=await G.Client.connect(sp)}catch(e1){cl=await G.Client.connect('https://'+sp.toLowerCase().replace(/[\/_.]/g,'-')+'.hf.space')}st='ler a API';const eps=(await cl.view_api()).named_endpoints||{};
   for(const[n,ep]of Object.entries(eps)){const ps=ep.parameters||[],im=ps.findIndex(p=>/^(Image|Gallery)/.test(p.component||'')),tx=ps.findIndex(p=>/^Textbox/.test(p.component||''));if(im<0||tx<0)continue;
    const a=ps.map((p,i)=>i===im?(/^Gallery/.test(ps[i].component)?[G.handle_file(blob)]:G.handle_file(blob)):i===tx?prompt:p.parameter_has_default?p.parameter_default:null);
    st='enviar e processar';const r=await Promise.race([cl.predict(n,a),new Promise((_,j)=>setTimeout(()=>j(new Error('tempo esgotado')),240000))]),u=findUrl(r.data);if(!u)continue;
