@@ -1,5 +1,5 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#15131c"><title>PhotoAI</title>
- <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&display=swap" rel="stylesheet">
 <style>
 :root{color-scheme:dark;--bg:#15131c;--pn:#201d2b;--ln:#342f45;--tx:#efeaf7;--mu:#a29bb5;--ac:#a89bff;--ok:#7be0b0;--wr:#ffc27a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}*,*::before,*::after{box-sizing:inherit}
@@ -91,7 +91,7 @@ $('#f1').onchange=e=>{openImg(e.target.files[0]);e.target.value=''};$('#f2').onc
 const H=$('#home');H.ondragover=e=>e.preventDefault();H.ondrop=e=>{e.preventDefault();openImg(e.dataTransfer.files[0])};
 /* ---------- interpretador de comandos ---------- */
 const N=t=>t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-const UN=[[/remov|apag|elimin|tire (as |os |a |o )?(pessoa|objeto|gente)/,'remover pessoas ou objetos'],[/fundo|cenario|background/,'trocar ou alterar o fundo'],[/espinha|imperfei|acne|ruga|pele/,'retocar a pele'],[/camiset|camisa|roupa|cabelo|olhos?\b|sorri/,'alterar partes específicas da imagem'],[/restaur|recuper|antiga/,'restaurar fotos antigas'],[/profissional|transform|crie|gere|gerar|desenh|anime|cartoon|pintura|ilustra/,'gerar ou transformar a imagem']];
+const UN=[[/remov|apag|elimin|\btir(e|a|ar)\b|retir/,'remover pessoas ou objetos'],[/fundo|cenario|background/,'trocar ou alterar o fundo'],[/espinha|imperfei|acne|ruga|pele/,'retocar a pele'],[/camiset|camisa|roupa|cabelo|olhos?\b|sorri/,'alterar partes específicas da imagem'],[/restaur|recuper|antiga/,'restaurar fotos antigas'],[/profissional|transform|crie|gere|gerar|desenh|anime|cartoon|pintura|ilustra/,'gerar ou transformar a imagem']];
 function parse(text){const t=N(text),P={t:{},g:{},labels:[],no:[],ign:[],gen:[],bg:null};
  const add=(k,v,l)=>{P.t[k]=(P.t[k]||0)+v;P.labels.push(l)},pc=v=>Math.round(Math.abs(v)*100)+'%';
  const cl=t.split(/[,;.!]|\se\s(?=(?:deix|mude|melhor|realc|cort|aument|reduz|aplic|gire|desfoq|adicion|fa[cz]a|torn|coloq))|\bdepois\b|\bagora\b/).map(s=>s.trim()).filter(Boolean);
@@ -150,12 +150,13 @@ function render(){const c=vers[idx],cv=$('#cv'),co=$('#co');cv.width=c.width;cv.
  const x=co.getContext('2d'),s=Math.min(c.width/orig.width,c.height/orig.height),w=orig.width*s,h=orig.height*s;x.clearRect(0,0,c.width,c.height);x.drawImage(orig,(c.width-w)/2,(c.height-h)/2,w,h);
  clip();$('#undo').disabled=idx<1;$('#redo').disabled=idx>=vers.length-1;$('#info').textContent=c.width+'×'+c.height+' px · versão '+idx}
 async function run(){const t=$('#cmd').value.trim();if(!t)return toast('Escreva o que deseja mudar.');say(t,'me');const P=parse(t);
+ if($('#online').checked&&P.ign.length){P.gen.push(...P.ign);P.no.push('fazer essa edição');P.ign=[]}
  const on=$('#online').checked&&P.gen.length;
  if(!on)P.no.forEach(n=>say('Não consigo '+n+' sem IA generativa, e não vou simular com um filtro. Marque "Permitir IA online" para tentar. Nada foi alterado para esse pedido.','wr'));
  if(P.ign.length)say('Não entendi: "'+P.ign.join('", "')+'". Tente por exemplo "mais clara", "mais nitidez" ou "corte 4:5".','wr');
  if(!P.labels.length&&!on)return;busy(true,'Processando…');await new Promise(r=>setTimeout(r,50));
  try{let o=apply(vers[idx],P);if(P.bg){busy(true,'Carregando IA local…');o=await doBg(o,P.bg)}
-  if(on){o=await remote(o,P.gen.join(', '));P.labels.push('edição generativa online (Hugging Face)')}
+  if(on){o=await remote(o,P.labels.length?P.gen.join(', '):t);P.labels.push('edição generativa online (Hugging Face)')}
   vers=vers.slice(0,idx+1);vers.push(o);if(vers.length>16)vers.splice(1,1);idx=vers.length-1;cmds.push(t);say('Aplicado: '+P.labels.join('; ')+'.','ok');$('#cmd').value='';$('#sl').value=0;render();save()}
  catch(e){say('Erro ao processar: '+e.message,'wr')}busy(false)}
 $('#go').onclick=run;$('#sl').oninput=clip;
