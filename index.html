@@ -184,7 +184,7 @@ async function doBg(c,b){const S=await loadSeg(),w=c.width,h=c.height;busy(true,
  if(b.m==='blur'){const D=c.getContext('2d').getImageData(0,0,w,h);D.data.set(bx(D.data,w,h,Math.max(2,Math.round(Math.max(w,h)/60))));y.putImageData(D,0,0)}
  else if(b.m==='fill'){const g=y.createLinearGradient(0,0,0,h);g.addColorStop(0,b.f[0]);g.addColorStop(1,b.f[1]);y.fillStyle=g;y.fillRect(0,0,w,h)}
  y.drawImage(cut,0,0);return o}
-const SPACES=['Qwen/Qwen-Image-Edit-2509','linoyts/Qwen-Image-Edit-2509-Fast','akhaliq/Qwen-Image-Edit-2509','prithivMLmods/Qwen-Image-Edit-2509-LoRAs-Fast'];let okOnline=0;
+const SPACES=['Qwen/Qwen-Image-Edit-2509','linoyts/Qwen-Image-Edit-2509-Fast','akhaliq/Qwen-Image-Edit-2509','Menyu/Qwen-Image-Edit-Fast-2509','prithivMLmods/Qwen-Image-Edit-2509-LoRAs-Fast'];let okOnline=0;
 const findUrl=d=>{if(!d)return'';if(typeof d==='string')return/^https?:/.test(d)?d:'';if(d.url)return d.url;for(const v of Object.values(d)){const u=findUrl(v);if(u)return u}return''};
 async function remote(c,prompt){if(!okOnline&&!confirm('Sua foto será enviada ao Hugging Face (serviço de terceiros) para esta edição. Continuar?'))throw new Error('envio cancelado');okOnline=1;
  const f=Math.min(1,1024/Math.max(c.width,c.height)),s=mk(Math.round(c.width*f),Math.round(c.height*f));s.getContext('2d').drawImage(c,0,0,s.width,s.height);
@@ -193,10 +193,10 @@ async function remote(c,prompt){if(!okOnline&&!confirm('Sua foto será enviada a
   let r=await J(H+'/gradio_api/info');if(!r.ok)r=await J(H+'/info');const eps=(await ok(r).json()).named_endpoints||{};
   for(const[n,ep]of Object.entries(eps)){const ps=ep.parameters||[],im=ps.findIndex(p=>/^(Image|Gallery)/.test(p.component||'')),tx=ps.findIndex(p=>/^Textbox/.test(p.component||''));if(im<0||tx<0)continue;
    st='enviar a foto';const fd=new FormData();fd.append('files',blob,'foto.jpg');const fo={path:(await ok(await J(H+'/gradio_api/upload',{method:'POST',body:fd})).json())[0],meta:{_type:'gradio.FileData'}};
-   const a=ps.map((p,i)=>i===im?(/^Gallery/.test(p.component)?[{image:fo,caption:null}]:fo):i===tx?prompt:p.parameter_has_default?p.parameter_default:null),api=H+'/gradio_api/call/'+n.replace(/^\//,'');
+   const a=ps.map((p,i)=>i===im?(/^Gallery/.test(p.component)?[{image:fo,caption:null}]:fo):i===tx?prompt:/rewrite/i.test(p.parameter_name||p.label||'')?false:p.parameter_has_default?p.parameter_default:null),api=H+'/gradio_api/call/'+n.replace(/^\//,'');
    st='processar';const q=await ok(await J(api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:a})})).json();
    const sse=await Promise.race([J(api+'/'+q.event_id).then(x=>x.text()),new Promise((_,j)=>setTimeout(()=>j(new Error('tempo esgotado')),240000))]),m=sse.match(/event: complete\s*\r?\ndata: (.*)/);
-   if(!m)throw new Error((sse.match(/event: error\s*\r?\ndata: (.*)/)||[])[1]||'o serviço não devolveu resultado (cota ou fila)');
+   if(!m){const em=(sse.match(/event: error\s*\r?\ndata: (.*)/)||[])[1];throw new Error(!em||em==='null'?'o Space falhou por dentro (provável cota gratuita de GPU esgotada ou fila cheia)':em)}
    const u=findUrl(JSON.parse(m[1]));if(!u)continue;
    st='baixar o resultado';const bm=await createImageBitmap(await ok(await J(u)).blob()),k=Math.min(1,2048/Math.max(bm.width,bm.height)),o=mk(Math.round(bm.width*k),Math.round(bm.height*k));o.getContext('2d').drawImage(bm,0,0,o.width,o.height);return o}
   err+=sp+': nenhum endpoint compatível. '}catch(e){err+=sp+' [etapa: '+st+']: '+(e.message||e)+'. '}}
